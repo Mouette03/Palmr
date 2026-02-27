@@ -169,7 +169,7 @@ export class LocalStorageProvider implements StorageProvider {
 
       const hash = crypto.createHash("md5");
       const hashTransform = new Transform({
-        transform(chunk, _enc, cb) {
+        transform(chunk: Buffer, _enc: BufferEncoding, cb: (error?: Error | null, data?: Buffer) => void) {
           hash.update(chunk);
           cb(null, chunk);
         },
