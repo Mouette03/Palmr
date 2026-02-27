@@ -16,8 +16,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as fsPromises from "fs/promises";
 import * as path from "path";
-import { Transform } from "stream";
-import { pipeline } from "stream";
+import { pipeline, Transform } from "stream";
 import { promisify } from "util";
 
 import { directoriesConfig } from "../config/directories.config";
