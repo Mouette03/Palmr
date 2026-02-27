@@ -1,0 +1,79 @@
+name: CI - Build & Type Check
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  server:
+    name: Server — Build & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.6.0"
+
+      - name: Install dependencies
+        working-directory: apps/server
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Type check
+        working-directory: apps/server
+        run: pnpm type-check
+
+      - name: Lint
+        working-directory: apps/server
+        run: pnpm lint
+
+      - name: Build (TypeScript → JavaScript)
+        working-directory: apps/server
+        run: pnpm build
+
+  web:
+    name: Web — Build & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.6.0"
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        working-directory: apps/web
+        run: pnpm type-check
+
+      - name: Lint
+        working-directory: apps/web
+        run: pnpm lint
+
+      - name: Build (Next.js)
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
