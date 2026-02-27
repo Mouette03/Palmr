@@ -229,20 +229,8 @@ export class ReverseShareService {
 
     const expires = parseInt(env.PRESIGNED_URL_EXPIRATION);
 
-    // Import storage config to check if using internal or external S3
-    const { isInternalStorage } = await import("../../config/storage.config.js");
-
-    if (isInternalStorage) {
-      // Internal storage: Use backend proxy for uploads (127.0.0.1 not accessible from client)
-      // Note: This would need request context, but reverse-shares are typically used by external users
-      // For now, we'll use presigned URLs and handle the error on the client side
-      const url = await this.fileService.getPresignedPutUrl(objectName, expires);
-      return { url, expiresIn: expires };
-    } else {
-      // External S3: Use presigned URLs directly (more efficient)
-      const url = await this.fileService.getPresignedPutUrl(objectName, expires);
-      return { url, expiresIn: expires };
-    }
+    const url = await this.fileService.getPresignedPutUrl(objectName, expires);
+    return { url, expiresIn: expires };
   }
 
   async getPresignedUrlByAlias(alias: string, objectName: string, password?: string) {
@@ -271,20 +259,8 @@ export class ReverseShareService {
 
     const expires = parseInt(env.PRESIGNED_URL_EXPIRATION);
 
-    // Import storage config to check if using internal or external S3
-    const { isInternalStorage } = await import("../../config/storage.config.js");
-
-    if (isInternalStorage) {
-      // Internal storage: Use backend proxy for uploads (127.0.0.1 not accessible from client)
-      // Note: This would need request context, but reverse-shares are typically used by external users
-      // For now, we'll use presigned URLs and handle the error on the client side
-      const url = await this.fileService.getPresignedPutUrl(objectName, expires);
-      return { url, expiresIn: expires };
-    } else {
-      // External S3: Use presigned URLs directly (more efficient)
-      const url = await this.fileService.getPresignedPutUrl(objectName, expires);
-      return { url, expiresIn: expires };
-    }
+    const url = await this.fileService.getPresignedPutUrl(objectName, expires);
+    return { url, expiresIn: expires };
   }
 
   async registerFileUpload(reverseShareId: string, fileData: UploadToReverseShareInput, password?: string) {
@@ -427,18 +403,8 @@ export class ReverseShareService {
     const fileName = file.name;
     const expires = parseInt(env.PRESIGNED_URL_EXPIRATION);
 
-    // Import storage config to check if using internal or external S3
-    const { isInternalStorage } = await import("../../config/storage.config.js");
-
-    if (isInternalStorage) {
-      // Internal storage: Use frontend proxy (much simpler!)
-      const url = `/api/files/download?objectName=${encodeURIComponent(file.objectName)}`;
-      return { url, expiresIn: expires };
-    } else {
-      // External S3: Use presigned URLs directly (more efficient, no backend proxy)
-      const url = await this.fileService.getPresignedGetUrl(file.objectName, expires, fileName);
-      return { url, expiresIn: expires };
-    }
+    const url = await this.fileService.getPresignedGetUrl(file.objectName, expires, fileName);
+    return { url, expiresIn: expires };
   }
 
   async deleteReverseShareFile(fileId: string, creatorId: string) {

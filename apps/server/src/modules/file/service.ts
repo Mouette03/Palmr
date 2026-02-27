@@ -1,12 +1,27 @@
-import { S3StorageProvider } from "../../providers/s3-storage.provider";
+import { LocalStorageProvider } from "../../providers/local-storage.provider";
 import { StorageProvider } from "../../types/storage";
 
 export class FileService {
   private storageProvider: StorageProvider;
+  private localProvider: LocalStorageProvider;
 
   constructor() {
-    // Always use S3 (Garage internal or external S3)
-    this.storageProvider = new S3StorageProvider();
+    this.localProvider = new LocalStorageProvider();
+    this.storageProvider = this.localProvider;
+  }
+
+  /**
+   * Save a raw stream to disk (upload handler).
+   * For simple uploads: saves directly to uploads dir.
+   * For multipart parts: saves to temp dir and returns ETag.
+   */
+  async saveStreamToFile(
+    stream: NodeJS.ReadableStream,
+    objectName: string,
+    uploadId?: string,
+    partNumber?: number
+  ): Promise<{ etag?: string }> {
+    return await this.localProvider.saveStreamToFile(stream, objectName, uploadId, partNumber);
   }
 
   async getPresignedPutUrl(objectName: string, expires: number = 3600): Promise<string> {
@@ -21,7 +36,7 @@ export class FileService {
     try {
       await this.storageProvider.deleteObject(objectName);
     } catch (err) {
-      console.error("Erro no removeObject:", err);
+      console.error("Error deleting object:", err);
       throw err;
     }
   }

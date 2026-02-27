@@ -1,4 +1,4 @@
-import { S3StorageProvider } from "../../providers/s3-storage.provider";
+import { LocalStorageProvider } from "../../providers/local-storage.provider";
 import { prisma } from "../../shared/prisma";
 import { StorageProvider } from "../../types/storage";
 
@@ -6,8 +6,7 @@ export class FolderService {
   private storageProvider: StorageProvider;
 
   constructor() {
-    // Always use S3 (Garage internal or external S3)
-    this.storageProvider = new S3StorageProvider();
+    this.storageProvider = new LocalStorageProvider();
   }
 
   async getPresignedPutUrl(objectName: string, expires: number): Promise<string> {

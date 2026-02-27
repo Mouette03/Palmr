@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { FastifyReply, FastifyRequest } from "fastify";
 
+import { directoriesConfig } from "../../config/directories.config";
 import { env } from "../../env";
 import { prisma } from "../../shared/prisma";
 import {
@@ -260,8 +261,11 @@ export class FileController {
       const fileName = fileRecord.name;
       const expires = parseInt(env.PRESIGNED_URL_EXPIRATION);
 
-      // Always use presigned URLs (works for both internal and external storage)
-      const url = await this.fileService.getPresignedGetUrl(objectName, expires, fileName);
+      // For local storage, relative URL is returned; append password for re-validation
+      let url = await this.fileService.getPresignedGetUrl(objectName, expires, fileName);
+      if (url.startsWith("/") && password) {
+        url += `&password=${encodeURIComponent(password)}`;
+      }
       return reply.send({ url, expiresIn: expires });
     } catch (error) {
       console.error("Error in getDownloadUrl:", error);
@@ -765,6 +769,82 @@ export class FileController {
     } catch (error) {
       console.error("[Multipart] Error aborting multipart upload:", error);
       return reply.status(500).send({ error: "Failed to abort multipart upload" });
+    }
+  }
+
+  /**
+   * Handle raw file upload (simple or multipart part).
+   *
+   * Routes:
+   *   PUT /files/upload?objectName=xxx                                → simple upload
+   *   PUT /files/upload?objectName=xxx&uploadId=yyy&partNumber=zzz   → multipart part
+   *
+   * Auth:
+   *   - objectName starts with "reverse-shares/" → no JWT required (session validated by uploadId)
+   *   - other objectNames → JWT required and userId must match path prefix
+   */
+  async uploadFile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { objectName, uploadId, partNumber } = request.query as {
+        objectName: string;
+        uploadId?: string;
+        partNumber?: string;
+      };
+
+      if (!objectName) {
+        return reply.status(400).send({ error: "objectName is required" });
+      }
+
+      const safeName = objectName.replace(/\.\./g, "_").replace(/^\/+/, "");
+
+      // Auth checks
+      if (safeName.startsWith("reverse-shares/")) {
+        // Reverse-share uploads don't require JWT.
+        // For multipart parts, verify the upload session exists.
+        if (uploadId) {
+          const path = await import("path");
+          const fs = await import("fs/promises");
+          const tempDir = path.join(directoriesConfig.tempUploads, `multipart-${uploadId}`);
+          try {
+            await fs.access(tempDir);
+          } catch {
+            return reply.status(401).send({ error: "Invalid upload session" });
+          }
+        }
+      } else {
+        // Authenticated user uploads
+        try {
+          await request.jwtVerify();
+          const userId = (request as any).user?.userId;
+          if (!userId) {
+            return reply.status(401).send({ error: "Unauthorized" });
+          }
+          if (!safeName.startsWith(userId + "/")) {
+            return reply.status(403).send({ error: "Access denied: path mismatch" });
+          }
+        } catch {
+          return reply.status(401).send({ error: "Unauthorized" });
+        }
+      }
+
+      const partNum = partNumber !== undefined ? parseInt(partNumber, 10) : undefined;
+      const stream = request.body as NodeJS.ReadableStream;
+
+      if (!stream || typeof (stream as any).pipe !== "function") {
+        return reply.status(400).send({ error: "No file data received" });
+      }
+
+      const { etag } = await this.fileService.saveStreamToFile(stream, objectName, uploadId, partNum);
+
+      if (etag) {
+        reply.header("ETag", etag);
+        reply.header("Access-Control-Expose-Headers", "ETag");
+      }
+
+      return reply.status(200).send({ message: "OK", etag: etag ?? null });
+    } catch (error) {
+      console.error("Error in uploadFile:", error);
+      return reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

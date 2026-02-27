@@ -55,6 +55,13 @@ async function handleUpload(req: NextRequest, method: "POST" | "PUT") {
       },
     });
 
+    // Forward ETag header so Uppy can use it for multipart upload part tracking
+    const etag = apiRes.headers.get("etag") || apiRes.headers.get("ETag");
+    if (etag) {
+      res.headers.set("ETag", etag);
+      res.headers.set("Access-Control-Expose-Headers", "ETag");
+    }
+
     const setCookie = apiRes.headers.getSetCookie?.() || [];
     if (setCookie.length > 0) {
       res.headers.set("Set-Cookie", setCookie.join(","));

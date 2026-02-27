@@ -1,4 +1,4 @@
-import { S3StorageProvider } from "../providers/s3-storage.provider";
+import { LocalStorageProvider } from "../providers/local-storage.provider";
 import { prisma } from "../shared/prisma";
 import { StorageProvider } from "../types/storage";
 
@@ -8,10 +8,9 @@ import { StorageProvider } from "../types/storage";
  */
 async function cleanupOrphanFiles() {
   console.log("Starting orphan file cleanup...");
-  console.log(`Storage mode: S3 (Garage or External)`);
+  console.log(`Storage mode: Local filesystem`);
 
-  // Always use S3 storage provider
-  const storageProvider: StorageProvider = new S3StorageProvider();
+  const storageProvider: StorageProvider = new LocalStorageProvider();
 
   // Get all files from database
   const allFiles = await prisma.file.findMany({

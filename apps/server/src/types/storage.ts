@@ -1,3 +1,7 @@
+/**
+ * Storage provider interface.
+ * Implemented by LocalStorageProvider (filesystem-based).
+ */
 export interface StorageProvider {
   getPresignedPutUrl(objectName: string, expires: number): Promise<string>;
   getPresignedGetUrl(objectName: string, expires: number, fileName?: string): Promise<string>;
@@ -14,15 +18,4 @@ export interface StorageProvider {
     parts: Array<{ PartNumber: number; ETag: string }>
   ): Promise<void>;
   abortMultipartUpload(objectName: string, uploadId: string): Promise<void>;
-}
-
-export interface StorageConfig {
-  endpoint: string;
-  port?: number;
-  useSSL: boolean;
-  accessKey: string;
-  secretKey: string;
-  region: string;
-  bucketName: string;
-  forcePathStyle?: boolean;
 }

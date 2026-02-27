@@ -427,4 +427,53 @@ export async function fileRoutes(app: FastifyInstance) {
     },
     fileController.abortMultipartUpload.bind(fileController)
   );
+
+  /**
+   * PUT /files/upload
+   *
+   * Receives raw file bytes uploaded by the frontend (via the Next.js proxy).
+   * Registered in a scoped sub-plugin so the wildcard content-type parser
+   * only applies to this route and doesn't interfere with JSON parsing elsewhere.
+   *
+   * Query params:
+   *   objectName  - target path in the uploads directory
+   *   uploadId    - (optional) multipart upload session ID
+   *   partNumber  - (optional) part number for multipart uploads
+   */
+  app.register(async function uploadRoutes(instance) {
+    // Accept any content type and pass the raw payload stream through as request.body
+    instance.addContentTypeParser("*", function (_request, payload, done) {
+      done(null, payload);
+    });
+
+    instance.put(
+      "/files/upload",
+      {
+        schema: {
+          tags: ["File"],
+          operationId: "uploadFile",
+          summary: "Upload File",
+          description:
+            "Receives raw file bytes. For simple uploads pass only objectName. " +
+            "For multipart parts also pass uploadId and partNumber.",
+          querystring: z.object({
+            objectName: z.string().min(1).describe("Target object name / path"),
+            uploadId: z.string().optional().describe("Multipart upload session ID"),
+            partNumber: z.string().optional().describe("Part number (1-10000)"),
+          }),
+          response: {
+            200: z.object({
+              message: z.string(),
+              etag: z.string().nullable().optional(),
+            }),
+            400: z.object({ error: z.string() }),
+            401: z.object({ error: z.string() }),
+            403: z.object({ error: z.string() }),
+            500: z.object({ error: z.string() }),
+          },
+        },
+      },
+      fileController.uploadFile.bind(fileController)
+    );
+  });
 }
