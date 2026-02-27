@@ -1,0 +1,48 @@
+name: Docker - Build Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  docker-build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t palmr:test .
+
+      - name: Start container
+        run: |
+          docker run -d \
+            --name palmr-test \
+            -p 3333:3333 \
+            -p 5487:5487 \
+            -v /tmp/palmr-test:/app/server \
+            palmr:test
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server to start..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3333/health > /dev/null 2>&1; then
+              echo "✅ Server is up!"
+              break
+            fi
+            echo "Attempt $i/30..."
+            sleep 5
+          done
+
+      - name: Test health endpoint
+        run: curl -sf http://localhost:3333/health | jq .
+
+      - name: Test web interface
+        run: curl -sf -o /dev/null -w "HTTP %{http_code}" http://localhost:5487
+
+      - name: Show container logs (on failure)
+        if: failure()
+        run: docker logs palmr-test
